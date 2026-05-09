@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PROVEED — Super Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  :root{ --verde:#A8E63D; --naranja:#FF8C00; --negro:#0A0A0A; --rojo:#FF4D4D; --azul:#007AFF; --morado:#AF52DE; }
+  body{ background:var(--negro); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+
+  /* LOGIN */
+  .login-screen{ position:fixed; inset:0; background:var(--negro); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1000; padding:32px; }
+  .login-logo{ width:64px; height:64px; background:var(--verde); border-radius:20px; display:flex; align-items:center; justify-content:center; margin-bottom:20px; }
+  .login-logo svg{ width:32px; height:32px; stroke:var(--negro); fill:none; stroke-width:2.5; }
+  .login-title{ font-size:1.4rem; font-weight:800; color:white; margin-bottom:4px; }
+  .login-sub{ font-size:0.82rem; color:#444; margin-bottom:32px; }
+  .login-field{ width:100%; margin-bottom:12px; }
+  .login-field input{ width:100%; padding:14px 16px; background:#111; border:1.5px solid #222; border-radius:14px; font-family:'Inter',sans-serif; font-size:0.92rem; color:white; outline:none; -webkit-appearance:none; }
+  .login-field input:focus{ border-color:var(--verde); }
+  .login-field input::placeholder{ color:#444; }
+  .btn-login{ width:100%; padding:15px; background:var(--verde); color:var(--negro); border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:0.95rem; font-weight:800; cursor:pointer; margin-top:4px; }
+  .login-error{ color:var(--rojo); font-size:0.78rem; text-align:center; margin-top:10px; display:none; }
+
+  /* ADMIN LAYOUT */
+  .admin-wrap{ display:none; min-height:100vh; }
+  .top-bar{ background:#111; padding:44px 16px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #1e1e1e; position:sticky; top:0; z-index:100; }
+  .top-bar-left{ display:flex; align-items:center; gap:10px; }
+  .top-logo{ width:32px; height:32px; background:var(--verde); border-radius:10px; display:flex; align-items:center; justify-content:center; }
+  .top-logo svg{ width:16px; height:16px; stroke:var(--negro); fill:none; stroke-width:2.5; }
+  .top-title{ font-size:1rem; font-weight:800; color:white; }
+  .top-title span{ color:var(--verde); }
+  .top-badge{ background:var(--rojo); color:white; font-size:0.58rem; font-weight:800; padding:2px 6px; border-radius:6px; text-transform:uppercase; }
+  .btn-logout{ background:#1e1e1e; color:#555; border:none; padding:8px 14px; border-radius:10px; font-family:'Inter',sans-serif; font-size:0.76rem; font-weight:600; cursor:pointer; }
+
+  /* TABS NAV */
+  .tabs-nav{ display:flex; overflow-x:auto; scrollbar-width:none; background:#111; border-bottom:1px solid #1e1e1e; padding:0 16px; gap:0; }
+  .tabs-nav::-webkit-scrollbar{ display:none; }
+  .tab-nav-btn{ padding:14px 16px; border:none; background:transparent; font-family:'Inter',sans-serif; font-size:0.78rem; font-weight:600; color:#555; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; transition:0.2s; }
+  .tab-nav-btn.active{ color:var(--verde); border-bottom-color:var(--verde); }
+
+  /* SECCIONES */
+  .section{ display:none; padding:16px; padding-bottom:40px; }
+  .section.active{ display:block; }
+  .kpi-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px; }
+  .kpi{ background:#111; border:1px solid #1e1e1e; border-radius:16px; padding:16px; }
+  .kpi-val{ font-size:1.6rem; font-weight:800; color:white; }
+  .kpi-val.verde{ color:var(--verde); }
+  .kpi-val.naranja{ color:var(--naranja); }
+  .kpi-val.rojo{ color:var(--rojo); }
+  .kpi-val.azul{ color:var(--azul); }
+  .kpi-lbl{ font-size:0.62rem; color:#555; font-weight:600; text-transform:uppercase; margin-top:4px; }
+
+  /* CARDS */
+  .sec-title{ font-size:0.72rem; font-weight:700; color:#444; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
+  .lista{ background:#111; border:1px solid #1e1e1e; border-radius:18px; overflow:hidden; margin-bottom:14px; }
+  .lista-item{ padding:14px 16px; border-bottom:1px solid #161616; display:flex; align-items:center; gap:12px; }
+  .lista-item:last-child{ border-bottom:none; }
+  .li-avatar{ width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; flex-shrink:0; overflow:hidden; }
+  .li-avatar img{ width:100%; height:100%; object-fit:cover; }
+  .li-info{ flex:1; min-width:0; }
+  .li-nombre{ font-size:0.88rem; font-weight:700; color:white; }
+  .li-sub{ font-size:0.72rem; color:#555; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .li-badge{ font-size:0.6rem; font-weight:700; padding:3px 8px; border-radius:6px; white-space:nowrap; flex-shrink:0; }
+  .badge-activo{ background:rgba(168,230,61,0.12); color:var(--verde); }
+  .badge-inactivo{ background:rgba(255,77,77,0.12); color:var(--rojo); }
+  .badge-pendiente{ background:rgba(255,140,0,0.12); color:var(--naranja); }
+  .badge-verificado{ background:rgba(0,122,255,0.12); color:var(--azul); }
+  .li-actions{ display:flex; gap:6px; flex-shrink:0; }
+  .li-btn{ padding:5px 10px; border-radius:8px; border:none; font-family:'Inter',sans-serif; font-size:0.68rem; font-weight:700; cursor:pointer; }
+  .btn-verde{ background:rgba(168,230,61,0.12); color:var(--verde); }
+  .btn-rojo{ background:rgba(255,77,77,0.12); color:var(--rojo); }
+  .btn-azul{ background:rgba(0,122,255,0.12); color:var(--azul); }
+  .btn-naranja{ background:rgba(255,140,0,0.12); color:var(--naranja); }
+
+  /* SEARCH */
+  .search-bar{ background:#111; border:1px solid #1e1e1e; border-radius:12px; padding:11px 14px; display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .search-bar input{ flex:1; background:transparent; border:none; outline:none; color:white; font-family:'Inter',sans-serif; font-size:0.88rem; }
+  .search-bar input::placeholder{ color:#444; }
+  .search-bar svg{ width:16px; height:16px; stroke:#444; fill:none; stroke-width:2.5; flex-shrink:0; }
+
+  /* FILTROS */
+  .filtros-row{ display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; scrollbar-width:none; }
+  .filtros-row::-webkit-scrollbar{ display:none; }
+  .filtro-btn{ padding:6px 14px; border-radius:20px; border:1px solid #222; background:transparent; font-size:0.72rem; font-weight:600; color:#555; cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif; }
+  .filtro-btn.active{ background:#1e1e1e; color:white; border-color:#333; }
+
+  /* MODAL */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.8); display:none; z-index:500; align-items:flex-end; }
+  .modal-overlay.show{ display:flex; }
+  .modal-sheet{ background:#111; width:100%; max-height:90vh; border-radius:24px 24px 0 0; transform:translateY(100%); transition:0.4s cubic-bezier(0.16,1,0.3,1); display:flex; flex-direction:column; overflow:hidden; border:1px solid #1e1e1e; border-bottom:none; }
+  .modal-overlay.show .modal-sheet{ transform:translateY(0); }
+  .drag{ width:36px; height:4px; background:#333; border-radius:4px; margin:14px auto 0; flex-shrink:0; }
+  .modal-header{ padding:12px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1e1e1e; flex-shrink:0; }
+  .modal-title{ font-size:1rem; font-weight:700; color:white; }
+  .close-btn{ width:30px; height:30px; background:#1e1e1e; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; border:none; }
+  .close-btn svg{ width:14px; height:14px; stroke:#666; fill:none; stroke-width:2.5; }
+  .modal-body{ overflow-y:auto; padding:16px 16px 32px; flex:1; }
+  .detail-row{ display:flex; gap:10px; margin-bottom:12px; }
+  .detail-label{ font-size:0.72rem; color:#555; font-weight:600; width:110px; flex-shrink:0; }
+  .detail-val{ font-size:0.82rem; color:white; flex:1; }
+  .detail-img{ width:100%; height:180px; object-fit:cover; border-radius:12px; margin-bottom:10px; }
+  .detail-imgs-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:12px; }
+  .detail-imgs-row img{ width:100%; height:80px; object-fit:cover; border-radius:10px; }
+  .modal-actions{ display:flex; gap:8px; margin-top:16px; }
+  .modal-btn{ flex:1; padding:12px; border-radius:12px; border:none; font-family:'Inter',sans-serif; font-size:0.82rem; font-weight:700; cursor:pointer; }
+
+  /* FORM */
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:0.68rem; font-weight:700; color:#555; text-transform:uppercase; margin-bottom:5px; }
+  .field input,.field select,.field textarea{ width:100%; padding:11px 13px; background:#1a1a1a; border:1px solid #222; border-radius:11px; font-family:'Inter',sans-serif; font-size:0.88rem; color:white; outline:none; -webkit-appearance:none; }
+  .field input:focus,.field textarea:focus{ border-color:var(--verde); }
+  .field input::placeholder,.field textarea::placeholder{ color:#444; }
+  .field select option{ background:#1a1a1a; }
+  .btn-submit{ width:100%; padding:13px; background:var(--verde); color:var(--negro); border:none; border-radius:13px; font-family:'Inter',sans-serif; font-size:0.92rem; font-weight:800; cursor:pointer; margin-top:6px; }
+
+  /* NOTIF BANNER */
+  .notif-banner{ background:rgba(168,230,61,0.08); border:1px solid rgba(168,230,61,0.2); border-radius:14px; padding:14px; margin-bottom:14px; }
+  .notif-banner-title{ font-size:0.82rem; font-weight:700; color:var(--verde); margin-bottom:4px; }
+  .notif-banner-sub{ font-size:0.74rem; color:#555; }
+
+  /* TOAST */
+  .toast{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--verde); color:var(--negro); padding:10px 20px; border-radius:24px; font-size:0.82rem; font-weight:700; opacity:0; transition:0.3s; pointer-events:none; z-index:1000; white-space:nowrap; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .empty-state{ text-align:center; padding:40px 20px; color:#444; }
+  .empty-state svg{ width:48px; height:48px; stroke:#333; fill:none; stroke-width:1.2; margin:0 auto 12px; display:block; }
+  .empty-state p{ font-size:0.82rem; }
+
+  /* VERIFICACIÓN FOTOS */
+  .fotos-verif{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px; }
+  .foto-verif-wrap{ border-radius:12px; overflow:hidden; }
+  .foto-verif-wrap img{ width:100%; height:100px; object-fit:cover; display:block; }
+  .foto-verif-label{ font-size:0.62rem; color:#555; text-align:center; padding:4px; background:#1a1a1a; }
+
+  /* CONFIG */
+  .config-item{ background:#111; border:1px solid #1e1e1e; border-radius:14px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
+  .config-label{ font-size:0.88rem; font-weight:600; color:white; }
+  .config-sub{ font-size:0.72rem; color:#555; margin-top:2px; }
+  .toggle{ width:44px; height:24px; background:#222; border-radius:12px; position:relative; cursor:pointer; border:none; transition:0.3s; flex-shrink:0; }
+  .toggle.on{ background:var(--verde); }
+  .toggle::after{ content:''; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:white; transition:0.3s; }
+  .toggle.on::after{ left:22px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-logo"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+  <div class="login-title">Super Admin</div>
+  <div class="login-sub">PROVEED · Panel de control</div>
+  <div class="login-field"><input type="email" id="a-email" placeholder="Correo administrador"></div>
+  <div class="login-field"><input type="password" id="a-pass" placeholder="Contraseña"></div>
+  <button class="btn-login" onclick="doLogin()">ENTRAR →</button>
+  <div class="login-error" id="login-error">Credenciales incorrectas</div>
+</div>
+
+<!-- ADMIN -->
+<div class="admin-wrap" id="admin-wrap">
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="top-logo"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div>
+        <div class="top-title">PRO<span>VEED</span></div>
+      </div>
+      <div class="top-badge">Admin</div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">Salir</button>
+  </div>
+
+  <div class="tabs-nav">
+    <button class="tab-nav-btn active" onclick="showTab('dashboard',this)">Dashboard</button>
+    <button class="tab-nav-btn" onclick="showTab('emprendedores',this)">Emprendedores</button>
+    <button class="tab-nav-btn" onclick="showTab('proveedores',this)">Proveedores</button>
+    <button class="tab-nav-btn" onclick="showTab('productos',this)">Productos</button>
+    <button class="tab-nav-btn" onclick="showTab('pedidos',this)">Pedidos</button>
+    <button class="tab-nav-btn" onclick="showTab('sql',this)">SQL</button>
+    <button class="tab-nav-btn" onclick="showTab('config',this)">Config</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="section active" id="sec-dashboard">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-val verde" id="k-emp">—</div><div class="kpi-lbl">Emprendedores</div></div>
+      <div class="kpi"><div class="kpi-val naranja" id="k-prov">—</div><div class="kpi-lbl">Proveedores</div></div>
+      <div class="kpi"><div class="kpi-val azul" id="k-prod">—</div><div class="kpi-lbl">Productos</div></div>
+      <div class="kpi"><div class="kpi-val rojo" id="k-ped">—</div><div class="kpi-lbl">Pedidos</div></div>
+      <div class="kpi"><div class="kpi-val" id="k-ventas">—</div><div class="kpi-lbl">Ventas totales</div></div>
+      <div class="kpi"><div class="kpi-val" id="k-verif">—</div><div class="kpi-lbl">Sin verificar</div></div>
+    </div>
+    <div class="sec-title">Actividad reciente</div>
+    <div class="lista" id="actividad-lista">
+      <div class="empty-state"><p>Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- EMPRENDEDORES -->
+  <div class="section" id="sec-emprendedores">
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="Buscar emprendedor..." oninput="buscarEmp(this.value)">
+    </div>
+    <div class="filtros-row">
+      <button class="filtro-btn active" onclick="filtrarEmp('todos',this)">Todos</button>
+      <button class="filtro-btn" onclick="filtrarEmp('activo',this)">Activos</button>
+      <button class="filtro-btn" onclick="filtrarEmp('inactivo',this)">Bloqueados</button>
+      <button class="filtro-btn" onclick="filtrarEmp('no-verificado',this)">Sin verificar</button>
+    </div>
+    <div id="emp-lista"><div class="empty-state"><p>Cargando...</p></div></div>
+  </div>
+
+  <!-- PROVEEDORES -->
+  <div class="section" id="sec-proveedores">
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="Buscar proveedor..." oninput="buscarProv(this.value)">
+    </div>
+    <div class="filtros-row">
+      <button class="filtro-btn active" onclick="filtrarProv('todos',this)">Todos</button>
+      <button class="filtro-btn" onclick="filtrarProv('activo',this)">Activos</button>
+      <button class="filtro-btn" onclick="filtrarProv('inactivo',this)">Bloqueados</button>
+      <button class="filtro-btn" onclick="filtrarProv('no-verificado',this)">Sin verificar</button>
+    </div>
+    <div id="prov-lista"><div class="empty-state"><p>Cargando...</p></div></div>
+  </div>
+
+  <!-- PRODUCTOS -->
+  <div class="section" id="sec-productos">
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="Buscar producto..." oninput="buscarProd(this.value)">
+    </div>
+    <div class="filtros-row">
+      <button class="filtro-btn active" onclick="filtrarProd('todos',this)">Todos</button>
+      <button class="filtro-btn" onclick="filtrarProd('activo',this)">Activos</button>
+      <button class="filtro-btn" onclick="filtrarProd('inactivo',this)">Pausados</button>
+    </div>
+    <div id="prod-lista"><div class="empty-state"><p>Cargando...</p></div></div>
+  </div>
+
+  <!-- PEDIDOS -->
+  <div class="section" id="sec-pedidos">
+    <div class="filtros-row">
+      <button class="filtro-btn active" onclick="filtrarPed('todos',this)">Todos</button>
+      <button class="filtro-btn" onclick="filtrarPed('pendiente',this)">Pendientes</button>
+      <button class="filtro-btn" onclick="filtrarPed('proceso',this)">En proceso</button>
+      <button class="filtro-btn" onclick="filtrarPed('completado',this)">Completados</button>
+    </div>
+    <div id="ped-lista"><div class="empty-state"><p>Cargando...</p></div></div>
+  </div>
+
+  <!-- SQL EDITOR -->
+  <div class="section" id="sec-sql">
+    <div class="notif-banner">
+      <div class="notif-banner-title">⚡ SQL Editor directo</div>
+      <div class="notif-banner-sub">Ejecuta queries en Supabase sin salir del admin</div>
+    </div>
+    <div class="field"><label>Query SQL</label><textarea id="sql-query" rows="8" placeholder="SELECT * FROM usuarios LIMIT 10;&#10;&#10;-- También puedes usar:&#10;-- ALTER TABLE, INSERT, UPDATE, DELETE"></textarea></div>
+    <button class="btn-submit" onclick="ejecutarSQL()">▶ Ejecutar SQL</button>
+    <div id="sql-resultado" style="margin-top:14px;"></div>
+  </div>
+
+
+  <!-- CONFIG -->
+  <div class="section" id="sec-config">
+    <div class="sec-title">Configuración de la plataforma</div>
+    <div class="config-item">
+      <div><div class="config-label">Registro de emprendedores</div><div class="config-sub">Permitir nuevos registros</div></div>
+      <button class="toggle on" id="tog-reg-emp" onclick="this.classList.toggle('on')"></button>
+    </div>
+    <div class="config-item">
+      <div><div class="config-label">Registro de proveedores</div><div class="config-sub">Permitir nuevas empresas</div></div>
+      <button class="toggle on" id="tog-reg-prov" onclick="this.classList.toggle('on')"></button>
+    </div>
+    <div class="config-item">
+      <div><div class="config-label">Verificación manual</div><div class="config-sub">Aprobar proveedores manualmente</div></div>
+      <button class="toggle on" id="tog-verif" onclick="this.classList.toggle('on')"></button>
+    </div>
+    <div class="config-item">
+      <div><div class="config-label">Chat entre usuarios</div><div class="config-sub">Habilitar mensajería</div></div>
+      <button class="toggle on" id="tog-chat" onclick="this.classList.toggle('on')"></button>
+    </div>
+
+    <div class="sec-title" style="margin-top:16px;">Agregar usuario manualmente</div>
+    <div class="lista" style="padding:14px 16px;">
+      <div class="field"><label>Correo *</label><input type="email" id="nu-email" placeholder="usuario@ejemplo.com"></div>
+      <div class="field"><label>Contraseña *</label><input type="password" id="nu-pass" placeholder="Mínimo 6 caracteres"></div>
+      <div class="field"><label>Nombre *</label><input type="text" id="nu-nombre" placeholder="Nombre completo"></div>
+      <div class="field">
+        <label>Rol *</label>
+        <select id="nu-rol">
+          <option value="emprendedor">Emprendedor</option>
+          <option value="proveedor">Proveedor</option>
+        </select>
+      </div>
+      <div class="field"><label>Ciudad</label><input type="text" id="nu-ciudad" placeholder="Ciudad"></div>
+      <button class="btn-submit" onclick="crearUsuarioManual()">Crear usuario</button>
+    </div>
+
+    <div class="sec-title" style="margin-top:16px;">Ejecutar SQL rápido</div>
+    <div class="lista" style="padding:14px 16px;">
+      <button class="btn-submit" style="background:#1e1e1e;color:#aaa;margin-bottom:8px;" onclick="sqlRapido('SELECT COUNT(*) FROM usuarios')">Contar usuarios</button>
+      <button class="btn-submit" style="background:#1e1e1e;color:#aaa;margin-bottom:8px;" onclick="sqlRapido('SELECT COUNT(*) FROM productos')">Contar productos</button>
+      <button class="btn-submit" style="background:#1e1e1e;color:#aaa;margin-bottom:8px;" onclick="sqlRapido('SELECT COUNT(*) FROM pedidos')">Contar pedidos</button>
+      <button class="btn-submit" style="background:rgba(255,77,77,0.1);color:var(--rojo);" onclick="confirmarBorrarPendientes()">🗑 Borrar pedidos pendientes viejos</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE USUARIO -->
+<div class="modal-overlay" id="modal-usuario" onclick="cerrarModal('modal-usuario',event)">
+  <div class="modal-sheet">
+    <div class="drag"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="modal-u-titulo">Detalle usuario</span>
+      <button class="close-btn" onclick="document.getElementById('modal-usuario').classList.remove('show')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="modal-u-body"></div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE PRODUCTO -->
+<div class="modal-overlay" id="modal-producto" onclick="cerrarModal('modal-producto',event)">
+  <div class="modal-sheet">
+    <div class="drag"></div>
+    <div class="modal-header">
+      <span class="modal-title">Detalle producto</span>
+      <button class="close-btn" onclick="document.getElementById('modal-producto').classList.remove('show')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="modal-p-body"></div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE PEDIDO -->
+<div class="modal-overlay" id="modal-pedido" onclick="cerrarModal('modal-pedido',event)">
+  <div class="modal-sheet">
+    <div class="drag"></div>
+    <div class="modal-header">
+      <span class="modal-title">Detalle pedido</span>
+      <button class="close-btn" onclick="document.getElementById('modal-pedido').classList.remove('show')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="modal-ped-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const { createClient } = supabase;
+const sb = createClient('https://hfmsyrmkewscnvwynzfq.supabase.co','sb_publishable_d1oLsq70a6ZV33vW3XkRgw_nYcN2Z9v');
+
+const ADMIN_EMAIL='proveed30@gmail.com';
+let todosEmp=[], todosProv=[], todosProd=[], todosPed=[];
+let filtroEmpActual='todos', filtroProvActual='todos', filtroProdActual='todos', filtroPedActual='todos';
+let busqEmp='', busqProv='', busqProd='';
+
+// LOGIN
+window.doLogin=async function(){
+  const email=document.getElementById('a-email').value.trim();
+  const pass=document.getElementById('a-pass').value;
+  if(email!==ADMIN_EMAIL){ document.getElementById('login-error').style.display='block'; return; }
+  const { data,error } = await sb.auth.signInWithPassword({email,password:pass});
+  if(error||!data.session){ document.getElementById('login-error').style.display='block'; return; }
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('admin-wrap').style.display='block';
+  cargarTodo();
+};
+
+window.doLogout=async function(){
+  await sb.auth.signOut();
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('admin-wrap').style.display='none';
+};
+
+// Verificar sesión al cargar
+(async()=>{
+  const { data:{session} } = await sb.auth.getSession();
+  if(session?.user?.email===ADMIN_EMAIL){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('admin-wrap').style.display='block';
+    cargarTodo();
+  }
+})();
+
+async function cargarTodo(){
+  const [empR,provR,prodR,pedR] = await Promise.all([
+    sb.from('usuarios').select('*').eq('rol','emprendedor').order('created_at',{ascending:false}),
+    sb.from('usuarios').select('*').eq('rol','proveedor').order('created_at',{ascending:false}),
+    sb.from('productos').select('*').order('created_at',{ascending:false}),
+    sb.from('pedidos').select('*').order('created_at',{ascending:false})
+  ]);
+  todosEmp=empR.data||[];
+  todosProv=provR.data||[];
+  todosProd=prodR.data||[];
+  todosPed=pedR.data||[];
+  renderDashboard();
+  renderEmprendedores();
+  renderProveedores();
+  renderProductos();
+  renderPedidos();
+}
+
+function renderDashboard(){
+  document.getElementById('k-emp').textContent=todosEmp.length;
+  document.getElementById('k-prov').textContent=todosProv.length;
+  document.getElementById('k-prod').textContent=todosProd.length;
+  document.getElementById('k-ped').textContent=todosPed.length;
+  const totalVentas=todosPed.filter(p=>p.estado==='completado').reduce((s,p)=>s+(p.total||0),0);
+  document.getElementById('k-ventas').textContent='$'+totalVentas.toFixed(0);
+  const sinVerif=[...todosEmp,...todosProv].filter(u=>!u.verificado).length;
+  document.getElementById('k-verif').textContent=sinVerif;
+
+  const actividad=document.getElementById('actividad-lista');
+  const recientes=[...todosPed].slice(0,5);
+  if(!recientes.length){ actividad.innerHTML='<div class="empty-state"><p>Sin actividad</p></div>'; return; }
+  actividad.innerHTML='';
+  recientes.forEach(p=>{
+    const div=document.createElement('div'); div.className='lista-item';
+    const fecha=new Date(p.created_at).toLocaleDateString('es-EC',{day:'2-digit',month:'short'});
+    div.innerHTML=`
+      <div class="li-avatar" style="background:rgba(255,140,0,0.12);color:var(--naranja);">📦</div>
+      <div class="li-info"><div class="li-nombre">Pedido #${p.id.slice(-6).toUpperCase()}</div><div class="li-sub">$${Number(p.total||0).toFixed(2)} · ${fecha}</div></div>
+      <span class="li-badge badge-${p.estado==='completado'?'activo':p.estado==='pendiente'?'pendiente':'verificado'}">${p.estado||'pendiente'}</span>`;
+    actividad.appendChild(div);
+  });
+}
+
+function renderEmprendedores(){
+  let lista=todosEmp.filter(u=>{
+    if(filtroEmpActual==='activo') return u.activo;
+    if(filtroEmpActual==='inactivo') return !u.activo;
+    if(filtroEmpActual==='no-verificado') return !u.verificado;
+    return true;
+  });
+  if(busqEmp) lista=lista.filter(u=>(u.nombre||'').toLowerCase().includes(busqEmp)||(u.email||'').toLowerCase().includes(busqEmp));
+  const cont=document.getElementById('emp-lista');
+  if(!lista.length){ cont.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><p>Sin emprendedores</p></div>'; return; }
+  cont.innerHTML='';
+  const wrap=document.createElement('div'); wrap.className='lista';
+  lista.forEach(u=>{
+    const div=document.createElement('div'); div.className='lista-item';
+    const foto=u.foto_perfil||'';
+    div.innerHTML=`
+      <div class="li-avatar" style="background:rgba(168,230,61,0.12);color:var(--verde);">${foto?`<img src="${foto}" alt="">`:( u.nombre||'E')[0].toUpperCase()}</div>
+      <div class="li-info"><div class="li-nombre">${u.nombre||'Sin nombre'}</div><div class="li-sub">${u.email||'—'} · ${u.ciudad||'—'}</div></div>
+      <div class="li-actions">
+        ${!u.verificado?`<button class="li-btn btn-azul" onclick="verificarUsuario('${u.id}')">Verificar</button>`:''}
+        <button class="li-btn ${u.activo?'btn-rojo':'btn-verde'}" onclick="toggleActivo('${u.id}',${u.activo},'emp')">${u.activo?'Bloquear':'Activar'}</button>
+        <button class="li-btn btn-naranja" onclick="verUsuario('${u.id}','emp')">Ver</button>
+      </div>`;
+    wrap.appendChild(div);
+  });
+  cont.appendChild(wrap);
+}
+
+function renderProveedores(){
+  let lista=todosProv.filter(u=>{
+    if(filtroProvActual==='activo') return u.activo;
+    if(filtroProvActual==='inactivo') return !u.activo;
+    if(filtroProvActual==='no-verificado') return !u.verificado;
+    return true;
+  });
+  if(busqProv) lista=lista.filter(u=>(u.nombre||'').toLowerCase().includes(busqProv)||(u.empresa||'').toLowerCase().includes(busqProv)||(u.email||'').toLowerCase().includes(busqProv));
+  const cont=document.getElementById('prov-lista');
+  if(!lista.length){ cont.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><p>Sin proveedores</p></div>'; return; }
+  cont.innerHTML='';
+  const wrap=document.createElement('div'); wrap.className='lista';
+  lista.forEach(u=>{
+    const div=document.createElement('div'); div.className='lista-item';
+    const logo=u.logo_empresa||u.foto_perfil||'';
+    div.innerHTML=`
+      <div class="li-avatar" style="background:rgba(255,140,0,0.12);color:var(--naranja);">${logo?`<img src="${logo}" alt="">`:( u.empresa||u.nombre||'P')[0].toUpperCase()}</div>
+      <div class="li-info"><div class="li-nombre">${u.empresa||u.nombre||'Sin nombre'}</div><div class="li-sub">${u.email||'—'} · ${u.ciudad||'—'} · ${u.categoria||'—'}</div></div>
+      <div class="li-actions">
+        ${!u.verificado?`<button class="li-btn btn-azul" onclick="verificarUsuario('${u.id}')">✓ Verificar</button>`:'<span class="li-badge badge-verificado">✓</span>'}
+        <button class="li-btn ${u.activo?'btn-rojo':'btn-verde'}" onclick="toggleActivo('${u.id}',${u.activo},'prov')">${u.activo?'Bloquear':'Activar'}</button>
+        <button class="li-btn btn-naranja" onclick="verUsuario('${u.id}','prov')">Ver</button>
+      </div>`;
+    wrap.appendChild(div);
+  });
+  cont.appendChild(wrap);
+}
+
+function renderProductos(){
+  let lista=todosProd.filter(p=>{
+    if(filtroProdActual==='activo') return p.activo;
+    if(filtroProdActual==='inactivo') return !p.activo;
+    return true;
+  });
+  if(busqProd) lista=lista.filter(p=>(p.nombre||'').toLowerCase().includes(busqProd));
+  const cont=document.getElementById('prod-lista');
+  if(!lista.length){ cont.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><p>Sin productos</p></div>'; return; }
+  cont.innerHTML='';
+  const wrap=document.createElement('div'); wrap.className='lista';
+  lista.forEach(p=>{
+    const div=document.createElement('div'); div.className='lista-item';
+    const img=p.imagenes?.[0]||p.imagen||'';
+    div.innerHTML=`
+      <div class="li-avatar" style="background:#1a1a1a;border-radius:10px;overflow:hidden;">${img?`<img src="${img}" alt="" style="width:100%;height:100%;object-fit:cover;">`:( p.nombre||'P')[0].toUpperCase()}</div>
+      <div class="li-info"><div class="li-nombre">${p.nombre||'Producto'}</div><div class="li-sub">$${Number(p.precio||0).toFixed(2)} · ${p.categoria||'—'} · ${p.nombre_proveedor||'—'}</div></div>
+      <div class="li-actions">
+        <button class="li-btn ${p.activo?'btn-rojo':'btn-verde'}" onclick="toggleProducto('${p.id}',${p.activo})">${p.activo?'Pausar':'Activar'}</button>
+        <button class="li-btn btn-naranja" onclick="verProducto('${p.id}')">Ver</button>
+      </div>`;
+    wrap.appendChild(div);
+  });
+  cont.appendChild(wrap);
+}
+
+function renderPedidos(){
+  let lista=todosPed.filter(p=>{
+    if(filtroPedActual!=='todos') return p.estado===filtroPedActual;
+    return true;
+  });
+  const cont=document.getElementById('ped-lista');
+  if(!lista.length){ cont.innerHTML='<div class="empty-state"><p>Sin pedidos</p></div>'; return; }
+  cont.innerHTML='';
+  const wrap=document.createElement('div'); wrap.className='lista';
+  lista.forEach(p=>{
+    const div=document.createElement('div'); div.className='lista-item';
+    const fecha=new Date(p.created_at).toLocaleDateString('es-EC',{day:'2-digit',month:'short',year:'numeric'});
+    div.innerHTML=`
+      <div class="li-avatar" style="background:rgba(255,140,0,0.12);color:var(--naranja);font-size:1.2rem;">📦</div>
+      <div class="li-info"><div class="li-nombre">#${p.id.slice(-6).toUpperCase()} · $${Number(p.total||0).toFixed(2)}</div><div class="li-sub">${fecha} · ${p.metodo_pago||'—'}</div></div>
+      <div class="li-actions">
+        <span class="li-badge badge-${p.estado==='completado'?'activo':p.estado==='pendiente'?'pendiente':'verificado'}">${p.estado||'pendiente'}</span>
+        <button class="li-btn btn-naranja" onclick="verPedido('${p.id}')">Ver</button>
+      </div>`;
+    wrap.appendChild(div);
+  });
+  cont.appendChild(wrap);
+}
+
+// ACCIONES
+window.toggleActivo=async function(id,actual,tipo){
+  await sb.from('usuarios').update({activo:!actual}).eq('id',id);
+  if(tipo==='emp'){ const idx=todosEmp.findIndex(u=>u.id===id); if(idx>=0) todosEmp[idx].activo=!actual; renderEmprendedores(); }
+  else { const idx=todosProv.findIndex(u=>u.id===id); if(idx>=0) todosProv[idx].activo=!actual; renderProveedores(); }
+  showToast(actual?'Usuario bloqueado':'Usuario activado');
+};
+
+window.verificarUsuario=async function(id){
+  await sb.from('usuarios').update({verificado:true}).eq('id',id);
+  const idxE=todosEmp.findIndex(u=>u.id===id);
+  const idxP=todosProv.findIndex(u=>u.id===id);
+  if(idxE>=0){ todosEmp[idxE].verificado=true; renderEmprendedores(); }
+  if(idxP>=0){ todosProv[idxP].verificado=true; renderProveedores(); }
+  showToast('✓ Usuario verificado');
+};
+
+window.toggleProducto=async function(id,actual){
+  await sb.from('productos').update({activo:!actual}).eq('id',id);
+  const idx=todosProd.findIndex(p=>p.id===id);
+  if(idx>=0) todosProd[idx].activo=!actual;
+  renderProductos();
+  showToast(actual?'Producto pausado':'Producto activado');
+};
+
+window.verUsuario=function(id,tipo){
+  const u=(tipo==='emp'?todosEmp:todosProv).find(u=>u.id===id);
+  if(!u) return;
+  document.getElementById('modal-u-titulo').textContent=tipo==='emp'?'Emprendedor':'Proveedor';
+  const body=document.getElementById('modal-u-body');
+  const foto=u.foto_perfil||''; const logo=u.logo_empresa||'';
+  body.innerHTML=`
+    ${logo?`<img src="${logo}" class="detail-img" alt="Logo">`:''}
+    ${foto?`<img src="${foto}" class="detail-img" alt="Foto">`:''}
+    <div class="detail-row"><div class="detail-label">Nombre</div><div class="detail-val">${u.nombre||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Email</div><div class="detail-val">${u.email||'—'}</div></div>
+    ${u.empresa?`<div class="detail-row"><div class="detail-label">Empresa</div><div class="detail-val">${u.empresa}</div></div>`:''}
+    ${u.ruc?`<div class="detail-row"><div class="detail-label">RUC</div><div class="detail-val">${u.ruc}</div></div>`:''}
+    <div class="detail-row"><div class="detail-label">Cédula</div><div class="detail-val">${u.cedula||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Teléfono</div><div class="detail-val">${u.telefono||'—'}</div></div>
+    ${u.tel_empresa?`<div class="detail-row"><div class="detail-label">Tel. empresa</div><div class="detail-val">${u.tel_empresa}</div></div>`:''}
+    <div class="detail-row"><div class="detail-label">Ciudad</div><div class="detail-val">${u.ciudad||'—'}</div></div>
+    ${u.categoria?`<div class="detail-row"><div class="detail-label">Categoría</div><div class="detail-val">${u.categoria}</div></div>`:''}
+    <div class="detail-row"><div class="detail-label">Verificado</div><div class="detail-val">${u.verificado?'✅ Sí':'❌ No'}</div></div>
+    <div class="detail-row"><div class="detail-label">Activo</div><div class="detail-val">${u.activo?'✅ Sí':'❌ Bloqueado'}</div></div>
+    <div class="detail-row"><div class="detail-label">Registro</div><div class="detail-val">${new Date(u.created_at).toLocaleDateString('es-EC')}</div></div>
+    ${u.cedula_frontal||u.cedula_trasera?`
+    <div style="font-size:0.72rem;color:#555;font-weight:700;text-transform:uppercase;margin:12px 0 8px;">Documentos de verificación</div>
+    <div class="fotos-verif">
+      ${u.foto_perfil?`<div class="foto-verif-wrap"><img src="${u.foto_perfil}" alt=""><div class="foto-verif-label">Selfie</div></div>`:''}
+      ${u.cedula_frontal?`<div class="foto-verif-wrap"><img src="${u.cedula_frontal}" alt=""><div class="foto-verif-label">Cédula frontal</div></div>`:''}
+      ${u.cedula_trasera?`<div class="foto-verif-wrap"><img src="${u.cedula_trasera}" alt=""><div class="foto-verif-label">Cédula trasera</div></div>`:''}
+    </div>`:''}
+    <div class="modal-actions">
+      ${!u.verificado?`<button class="modal-btn" style="background:rgba(0,122,255,0.12);color:var(--azul);" onclick="verificarUsuario('${u.id}');document.getElementById('modal-usuario').classList.remove('show')">✓ Verificar</button>`:''}
+      <button class="modal-btn" style="background:${u.activo?'rgba(255,77,77,0.12)':'rgba(168,230,61,0.12)'};color:${u.activo?'var(--rojo)':'var(--verde)'};" onclick="toggleActivo('${u.id}',${u.activo},'${tipo}');document.getElementById('modal-usuario').classList.remove('show')">${u.activo?'Bloquear':'Activar'}</button>
+      <button class="modal-btn" style="background:rgba(255,77,77,0.08);color:var(--rojo);" onclick="eliminarUsuario('${u.id}','${tipo}')">Eliminar</button>
+    </div>`;
+  document.getElementById('modal-usuario').classList.add('show');
+};
+
+window.eliminarUsuario=async function(id,tipo){
+  if(!confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
+  await sb.from('usuarios').delete().eq('id',id);
+  if(tipo==='emp') todosEmp=todosEmp.filter(u=>u.id!==id);
+  else todosProv=todosProv.filter(u=>u.id!==id);
+  document.getElementById('modal-usuario').classList.remove('show');
+  renderEmprendedores(); renderProveedores();
+  showToast('Usuario eliminado');
+};
+
+window.verProducto=function(id){
+  const p=todosProd.find(p=>p.id===id); if(!p) return;
+  const body=document.getElementById('modal-p-body');
+  const imgs=p.imagenes||( p.imagen?[p.imagen]:[]);
+  body.innerHTML=`
+    ${imgs.length?`<div class="detail-imgs-row">${imgs.map(i=>`<img src="${i}" alt="">`).join('')}</div>`:''}
+    <div class="detail-row"><div class="detail-label">Nombre</div><div class="detail-val">${p.nombre||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Precio</div><div class="detail-val">$${Number(p.precio||0).toFixed(2)}</div></div>
+    <div class="detail-row"><div class="detail-label">Categoría</div><div class="detail-val">${p.categoria||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Stock</div><div class="detail-val">${p.stock||0} und.</div></div>
+    <div class="detail-row"><div class="detail-label">Proveedor</div><div class="detail-val">${p.nombre_proveedor||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Vistas</div><div class="detail-val">${p.vistas||0}</div></div>
+    <div class="detail-row"><div class="detail-label">Estado</div><div class="detail-val">${p.activo?'✅ Activo':'❌ Pausado'}</div></div>
+    <div class="detail-row"><div class="detail-label">Descripción</div><div class="detail-val">${p.descripcion||'—'}</div></div>
+    <div class="modal-actions">
+      <button class="modal-btn" style="background:${p.activo?'rgba(255,77,77,0.1)':'rgba(168,230,61,0.1)'};color:${p.activo?'var(--rojo)':'var(--verde)'};" onclick="toggleProducto('${p.id}',${p.activo});document.getElementById('modal-producto').classList.remove('show')">${p.activo?'Pausar':'Activar'}</button>
+      <button class="modal-btn" style="background:rgba(255,77,77,0.08);color:var(--rojo);" onclick="eliminarProducto('${p.id}')">Eliminar</button>
+    </div>`;
+  document.getElementById('modal-producto').classList.add('show');
+};
+
+window.eliminarProducto=async function(id){
+  if(!confirm('¿Eliminar este producto?')) return;
+  await sb.from('productos').delete().eq('id',id);
+  todosProd=todosProd.filter(p=>p.id!==id);
+  document.getElementById('modal-producto').classList.remove('show');
+  renderProductos();
+  showToast('Producto eliminado');
+};
+
+window.verPedido=function(id){
+  const p=todosPed.find(p=>p.id===id); if(!p) return;
+  const body=document.getElementById('modal-ped-body');
+  const entrega=p.entrega||{};
+  const items=p.items||[];
+  body.innerHTML=`
+    <div class="detail-row"><div class="detail-label">ID</div><div class="detail-val">#${p.id.slice(-6).toUpperCase()}</div></div>
+    <div class="detail-row"><div class="detail-label">Total</div><div class="detail-val" style="color:var(--naranja);font-weight:800;">$${Number(p.total||0).toFixed(2)}</div></div>
+    <div class="detail-row"><div class="detail-label">Estado</div><div class="detail-val">${p.estado||'pendiente'}</div></div>
+    <div class="detail-row"><div class="detail-label">Pago</div><div class="detail-val">${p.metodo_pago||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Fecha</div><div class="detail-val">${new Date(p.created_at).toLocaleDateString('es-EC')}</div></div>
+    <div style="font-size:0.72rem;color:#555;font-weight:700;text-transform:uppercase;margin:12px 0 8px;">Entrega</div>
+    <div class="detail-row"><div class="detail-label">Nombre</div><div class="detail-val">${entrega.nombre||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Teléfono</div><div class="detail-val">${entrega.telefono||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Ciudad</div><div class="detail-val">${entrega.ciudad||'—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Dirección</div><div class="detail-val">${entrega.direccion||'—'}</div></div>
+    <div style="font-size:0.72rem;color:#555;font-weight:700;text-transform:uppercase;margin:12px 0 8px;">Productos (${items.length})</div>
+    ${items.map(i=>`<div class="detail-row"><div class="detail-label">${i.nombre||'—'}</div><div class="detail-val">${i.cantidad} × $${Number(i.precio||0).toFixed(2)}</div></div>`).join('')}
+    <div class="modal-actions">
+      ${p.estado==='pendiente'?`<button class="modal-btn" style="background:rgba(0,122,255,0.1);color:var(--azul);" onclick="cambiarEstadoPedido('${p.id}','proceso')">En proceso</button>`:''}
+      ${p.estado!=='completado'?`<button class="modal-btn" style="background:rgba(168,230,61,0.1);color:var(--verde);" onclick="cambiarEstadoPedido('${p.id}','completado')">✓ Completado</button>`:''}
+      ${p.estado!=='cancelado'?`<button class="modal-btn" style="background:rgba(255,77,77,0.08);color:var(--rojo);" onclick="cambiarEstadoPedido('${p.id}','cancelado')">Cancelar</button>`:''}
+    </div>`;
+  document.getElementById('modal-pedido').classList.add('show');
+};
+
+window.cambiarEstadoPedido=async function(id,estado){
+  await sb.from('pedidos').update({estado}).eq('id',id);
+  const idx=todosPed.findIndex(p=>p.id===id);
+  if(idx>=0) todosPed[idx].estado=estado;
+  document.getElementById('modal-pedido').classList.remove('show');
+  renderPedidos(); renderDashboard();
+  showToast('Estado actualizado: '+estado);
+};
+
+// SQL
+window.ejecutarSQL=async function(){
+  const query=document.getElementById('sql-query').value.trim();
+  if(!query) return;
+  const res=document.getElementById('sql-resultado');
+  res.innerHTML='<div style="color:#555;font-size:0.82rem;">Ejecutando...</div>';
+  try{
+    const { data,error } = await sb.rpc('exec_sql',{query}).catch(()=>({error:{message:'RPC no disponible'}}));
+    if(error){
+      // Intentar directo según tipo
+      let result;
+      const q=query.trim().toUpperCase();
+      if(q.startsWith('SELECT')){
+        const table=query.match(/FROM\s+(\w+)/i)?.[1];
+        if(table){ result=await sb.from(table).select('*').limit(50); }
+      } else if(q.startsWith('ALTER TABLE')){
+        res.innerHTML=`<div style="background:rgba(168,230,61,0.08);border:1px solid rgba(168,230,61,0.2);border-radius:12px;padding:12px;color:var(--verde);font-size:0.82rem;">Para ejecutar ALTER TABLE ve directamente al SQL Editor de Supabase. Este admin es para operaciones de datos.</div>`;
+        return;
+      }
+      if(result?.data){
+        renderSQLResult(result.data);
+      } else {
+        res.innerHTML=`<div style="background:rgba(255,77,77,0.08);border:1px solid rgba(255,77,77,0.2);border-radius:12px;padding:12px;color:var(--rojo);font-size:0.82rem;">Error: ${error.message}</div>`;
+      }
+    } else {
+      renderSQLResult(data||[]);
+    }
+  } catch(e){
+    res.innerHTML=`<div style="background:rgba(255,77,77,0.08);border:1px solid rgba(255,77,77,0.2);border-radius:12px;padding:12px;color:var(--rojo);font-size:0.82rem;">Error: ${e.message}</div>`;
+  }
+};
+
+window.sqlRapido=async function(query){
+  document.getElementById('sql-query').value=query;
+  showTab('sql',document.querySelector('[onclick*="sql"]'));
+  setTimeout(ejecutarSQL,100);
+};
+
+function renderSQLResult(data){
+  const res=document.getElementById('sql-resultado');
+  if(!data?.length){ res.innerHTML='<div style="color:#555;font-size:0.82rem;padding:10px;">Sin resultados</div>'; return; }
+  const keys=Object.keys(data[0]);
+  res.innerHTML=`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.72rem;"><thead><tr>${keys.map(k=>`<th style="padding:8px;background:#1a1a1a;color:#aaa;text-align:left;border:1px solid #222;">${k}</th>`).join('')}</tr></thead><tbody>${data.map(row=>`<tr>${keys.map(k=>`<td style="padding:8px;border:1px solid #1e1e1e;color:white;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${row[k]===null?'<span style="color:#444">null</span>':JSON.stringify(row[k]).slice(0,80)}</td>`).join('')}</tr>`).join('')}</tbody></table><div style="font-size:0.7rem;color:#444;margin-top:8px;">${data.length} resultados</div></div>`;
+}
+
+// CREAR USUARIO
+window.crearUsuarioManual=async function(){
+  const email=document.getElementById('nu-email').value.trim();
+  const pass=document.getElementById('nu-pass').value;
+  const nombre=document.getElementById('nu-nombre').value.trim();
+  const rol=document.getElementById('nu-rol').value;
+  const ciudad=document.getElementById('nu-ciudad').value.trim();
+  if(!email||!pass||!nombre){ showToast('Completa los campos obligatorios'); return; }
+  try{
+    const { data,error } = await sb.auth.signUp({email,password:pass});
+    if(error) throw error;
+    await sb.from('usuarios').insert({id:data.user.id,email,nombre,rol,ciudad,activo:true,verificado:false});
+    showToast('✓ Usuario creado: '+nombre);
+    document.getElementById('nu-email').value='';
+    document.getElementById('nu-pass').value='';
+    document.getElementById('nu-nombre').value='';
+    document.getElementById('nu-ciudad').value='';
+    cargarTodo();
+  } catch(e){
+    showToast('Error: '+e.message);
+  }
+};
+
+window.confirmarBorrarPendientes=async function(){
+  if(!confirm('¿Eliminar todos los pedidos pendientes de más de 30 días?')) return;
+  const fecha=new Date(); fecha.setDate(fecha.getDate()-30);
+  await sb.from('pedidos').delete().eq('estado','pendiente').lt('created_at',fecha.toISOString());
+  showToast('Pedidos viejos eliminados');
+  cargarTodo();
+};
+
+// FILTROS
+window.filtrarEmp=(f,el)=>{ filtroEmpActual=f; document.querySelectorAll('#sec-emprendedores .filtro-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderEmprendedores(); };
+window.filtrarProv=(f,el)=>{ filtroProvActual=f; document.querySelectorAll('#sec-proveedores .filtro-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderProveedores(); };
+window.filtrarProd=(f,el)=>{ filtroProdActual=f; document.querySelectorAll('#sec-productos .filtro-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderProductos(); };
+window.filtrarPed=(f,el)=>{ filtroPedActual=f; document.querySelectorAll('#sec-pedidos .filtro-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); renderPedidos(); };
+window.buscarEmp=v=>{ busqEmp=v.toLowerCase(); renderEmprendedores(); };
+window.buscarProv=v=>{ busqProv=v.toLowerCase(); renderProveedores(); };
+window.buscarProd=v=>{ busqProd=v.toLowerCase(); renderProductos(); };
+
+// TABS
+window.showTab=function(tab,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+tab).classList.add('active');
+  if(btn) btn.classList.add('active');
+};
+
+window.cerrarModal=(id,e)=>{ if(e.target===document.getElementById(id)) document.getElementById(id).classList.remove('show'); };
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
